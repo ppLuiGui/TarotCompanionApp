@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Tarot Companion App</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap');
+
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-text: #e0b1cb;
+            --secondary-text: #b6b6b6;
+            --card-bg: #2d2d5a;
+            --border-color: #4a4a8a;
+            --accent-color: #9d5a9d;
+            --accent-hover: #b875b8;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--secondary-text);
+            overscroll-behavior: none;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: rgba(10, 10, 20, 0.5);
+            border-radius: 15px;
+            box-shadow: 0 0 25px rgba(224, 177, 203, 0.1);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        header h1 {
+            color: var(--primary-text);
+            font-weight: 300;
+            letter-spacing: 2px;
+            font-size: 1.8em;
+        }
+
+        #clear-btn {
+            padding: 10px 20px;
+            font-size: 1em;
+            font-weight: 600;
+            background-color: transparent;
+            color: var(--primary-text);
+            border: 2px solid var(--primary-text);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #clear-btn:hover {
+            background-color: var(--primary-text);
+            color: var(--bg-color);
+        }
+
+        #canvas {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background-color: rgba(0,0,0,0.2);
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        
+        #add-card-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: var(--accent-color);
+            color: white;
+            border-radius: 50%;
+            border: none;
+            font-size: 30px;
+            line-height: 50px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        #add-card-btn:hover {
+            background-color: var(--accent-hover);
+            transform: scale(1.1);
+        }
+
+        .card-container {
+            position: absolute;
+            cursor: grab;
+            z-index: 10;
+            transition: transform 0.4s ease;
+        }
+        
+        .card-container.dragging {
+            cursor: grabbing;
+            z-index: 20;
+            transition: none; /* Disable transition while dragging for smoothness */
+        }
+        
+        .card-container.inverted .tarot-card {
+            transform: rotate(180deg);
+        }
+
+        .tarot-card {
+            width: 150px;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            transition: transform 0.4s ease, box-shadow 0.2s ease;
+            display: block;
+            pointer-events: none;
+        }
+        
+        .card-container.active-card .tarot-card {
+            box-shadow: 0 0 20px var(--primary-text);
+            border: 2px solid var(--primary-text);
+        }
+
+        .delete-card-btn {
+            display: none;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 24px;
+            height: 24px;
+            background-color: #ff5c5c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 24px;
+            text-align: center;
+            cursor: pointer;
+            z-index: 11;
+        }
+        
+        .card-container.active-card .delete-card-btn {
+            display: block;
+        }
+        
+        .info-panel {
+            margin-top: 20px;
+        }
+
+        .info-box {
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 15px;
+            min-height: 80px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: var(--primary-text);
+        }
+        
+        #description-title {
+            margin-top: 0;
+            color: var(--primary-text);
+        }
+
+        .description-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .desc-btn {
+            padding: 12px 18px;
+            font-size: 0.9em;
+            font-weight: 400;
+            background-color: var(--card-bg);
+            color: var(--secondary-text);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .desc-btn:hover, .desc-btn.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-hover);
+        }
+
+        .modal {
+            display: none; position: fixed; z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            background-color: var(--bg-color); margin: 10% auto; padding: 20px;
+            border: 1px solid var(--border-color); width: 80%; max-width: 500px;
+            border-radius: 15px; box-shadow: 0 0 30px rgba(224, 177, 203, 0.2);
+        }
+        .modal-header {
+             display: flex; justify-content: space-between; align-items: center;
+             color: var(--primary-text); border-bottom: 1px solid var(--border-color);
+             padding-bottom: 10px; margin-bottom: 20px;
+        }
+        #modal-card-list {
+            list-style: none; padding: 0; max-height: 40vh; overflow-y: auto;
+        }
+        #modal-card-list li {
+            padding: 15px; border-bottom: 1px solid var(--border-color);
+            cursor: pointer; transition: background-color 0.2s;
+        }
+        #modal-card-list li:hover {
+            background-color: var(--card-bg); color: var(--primary-text);
+        }
+        .close-btn {
+            color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>TAROT COMPANION APP</h1> v.001
+            <button id="clear-btn">CLEAR</button>
+        </header>
+
+        <div id="canvas">
+             <button id="add-card-btn">+</button>
+        </div>
+
+        <div class="info-panel">
+            <div id="analisis-box" class="info-box">
+                <h3 id="analisis-title">Análisis</h3>
+                <p id="analisis-text">Agrega y selecciona una carta para ver su análisis.</p>
+            </div>
+            <div class="description-buttons">
+                <button class="desc-btn" data-desc="general">Descripción General</button>
+                <button class="desc-btn" data-desc="trabajo">Trabajo</button>
+                <button class="desc-btn" data-desc="amor">Amor</button>
+                <button class="desc-btn" data-desc="salud">Salud</button>
+                <button class="desc-btn" data-desc="espiritualidad">Espiritualidad</button>
+            </div>
+             <div id="description-box" class="info-box" style="margin-top: 20px;">
+                <h3 id="description-title">Descripción</h3>
+                <p id="description-text">Selecciona una categoría para ver su descripción.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="card-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Elige un Arcano</h2>
+                <span class="close-btn">&times;</span>
+            </div>
+            <ul id="modal-card-list"></ul>
+        </div>
+    </div>
+
+    <script>
+    const tarotData = [
+        {"carta_numero":0,"carta_nombre":"EL LOCO","analisis":"El numero 0: posibilidades por descubrir, ese punto antes de siquiera iniciar, no es un lugar definido, potencial sin limites; El sol: Es un nuevo dia! Inicio de la aventura; El fondo y botas amarillas: felicidad, positivismo; El acantilado: a punto de caer del mundo material; El saco: todo los recursos para emprender el viaje?; La postura del personaje: animado, alegre, despistado, disfrutando, no mira hacia enfrente; La rosa: su inocencia y juventud; Ropas con flores amarillas: felicidad, nacimiento, florecimiento; Ropa interior roja y blanca: pureza, inocencia, accion, pasion; Perro blanco: conciencia, ¡cuidado!; Territorio: viene de las montañas blancas (inocencia)","desc_general":"Principio de algo; Inocencia; Espiritu libre; Pureza; Nuevos inicios; Ganas de aprender; Trasendencia espiritual; Entusiasmo","desc_amor":"Nuevo ciclo amoroso; Relacion corta; Romance no maduro; Sin compromisos; Pasión; Romance intenso","desc_trabajo":"Nuevo trabajo o posicion; Profeciones donde es necesario el movimiento o artes; Emprendimiento; Poca concentracion, procrastinacion","desc_salud":"Propenso a accidentes; Trastornos mentales; No corras riesgos; Mejora la salud; Encuentras ayuda; Problemas de circulacion sanguinea","desc_espiritualidad":"Empezando en el camino espiritual; Quieres probar todo; Necesidad de entender profundamente tu espiritualidad","inv_general":"Alocado; No escucha; Hablador; Insensatez; Ingenuidad; Dudas para dar inicio a algo; Actuar sin pensar; Hacer papel de tonto","inv_amor":"Es muy dificil tener una relacion por la necesidad de libertad; No hay planes; No hay compromiso; No se quiere sentar cabeza; Inestabilidad; Malas influencias","inv_trabajo":"Incapacidad para iniciar un trabajo o proyecto nuevo; Indecisión para poner en marcha tus ideas; Duda de capacidades y talentos","inv_salud":"Accidentes frecuentes y letales; Pide segundas opiniones; Te cuesta mantener pensamientos positivos","inv_espiritualidad":"Desconexion con el camino; Abandono del sistema actual de creencias; No hay avances en tu camino espiritual","image_url":"https://upload.wikimedia.org/wikipedia/commons/9/90/RWS_Tarot_00_Fool.jpg"},
+        {"carta_numero":1,"carta_nombre":"EL MAGO","analisis":"Numero 1: simboliza la expresion divina, identidad, individualidad, comunicación, independencia, originalidad, liderazgo.; Posicion de los brazos: recibe energias del universo y las manifiesta en el mundo terrenal; Conexión entre los 2 mundos; Simbolo de infinito sobre su cabeza y serpiente mordiendo su cola en el cinturon: ciclo natural, energia en movimiento; 4 simbolos en la mesa: los 4 palos (es decir tiene todo lo necesario para lograr su objetivo); Copas: sentimientos; Oros: material; Bastos: Accion; Espadas: pensamientos; Ropa: La tunica blanca nos recuerda que aun es el loco con su inocencia, pureza e ingenuidad.; Pero esta cubierta por la capa roja que es la accion, sabiduria, experiencia.; Flores rojas y blancas: igual que la ropa.; Follaje: crecimiento de lo que va creando; Fondo amarillo: positividad, inteligencia, aprendizaje","desc_general":"Manifestacion; Creacion; Transformacion; Creatividad; Fuerza de voluntad; Juventud; Habilidad; Liderazgo; Cree en tu habilidad; Ingenio","desc_amor":"Conoceras a alguien nuevo (si estas buscando); Si tienes una relacion, esta llega a nuevos niveles; Momento idoneo para conocer gente nueva y superar desamores; Atraccion sexual; Dominio de la relacion; Tu puedes resolver tus problemas amorosoOS.","desc_trabajo":"Mejora laboral; Excelente momento para encontrar un nuevo trabajo; Logros profesionales importantes; Aumento de sueldo; Habilidades con las manos; Facilidad para solucionar problemas; Liderazgo","desc_salud":"Problemas de salud se solucionan; Fuerza o recuperacion de fuerza; Terapias alternativas; Cabeza, garganta, oidos, cirujias; Vitalidad fuerte","desc_espiritualidad":"Momento para emprender estudios espirituales; Maestro espiritual; Capacidad de manifestacion","inv_general":"Manipulacion; Talentos no desarrollados; Mala planificacion; Inseguridad con capacidades de uno mismo; Resistencia al cambio","inv_amor":"Discuciones; Nuevos problemas; Infidelidad; Cansancio en la relacion; Fin de relacion; No sabes lo que quieres; Dudas de tu capacidad para encontrar pareja","inv_trabajo":"Flojera; Huir del trabajo; Negocios poco claros; Vives de los exitos pasados; Fraudes o engaños; Voluntad debil; Manejar personas a tu conveniencia","inv_salud":"Ansiedad; Estrés; Insomnio; Inicio de una nueva enfermedad; Depresion; Baja autoestima","inv_espiritualidad":"Necesitas salir de tu zona de confort; Alguien te quiere cerrar caminos; No tienes los pies sobre la tierra; Cuidado con los charlatanes","image_url":"https://upload.wikimedia.org/wikipedia/commons/d/de/RWS_Tarot_01_Magician.jpg"},
+        {"carta_numero":2,"carta_nombre":"LA SACERDOTISA","analisis":"El numero 2: dualidad, equilibrio, instintos, empatia, adaptabilidad, receptividad, divino femenino; Sombrero de la sacerdotiza: es el simbolo de la luna, simboliza intuicion, misticismo, lo desconocido, simbolo de la triple diosa; Ropas azules: conocimiento, sensibilidad, espiritualidad, emociones; Cruz en el pecho: es la cruz de San Andres que indica sufrimiento, humildad y heroismo.; Para alcanzar la sabiduria espiritual requerimos de sufrimiento y valor.; Tora en sus manos: ley hebrea, representa sabiduria, leyes, disciplina, secretos del mundo.; Columnas: Son boaz y jakin columnas del templo de salomon.; Boaz: fuerza y Jakin: justicia, principios activo y pasivo que forman el conocimiento.; Usadas en la masoneria.; Tambien representanumbral a un nuevo mundo.; Granadas de atrás: Tambien aparecen en el portico del templo de salomon y representan pureza, virginidad y victoria.; Lo que indica que la suma sacerdotisa tiene conocimiento espiritual y esta alejada de lo carnal.; Agua de atrás: fuente de vida, creacion e inconciente; Luna creciente en los pies: control sobre pasiones y dominio de la intuicion","desc_general":"Intuicion; Misterio; Espacio entre el conciente y el subconciente; Espiritualidad; Embarazos; Madre; No dice todo lo que sabe; Sueños; Atraccion sexual; Para avanzar deja tus temores atrás","desc_amor":"Confia en tus instintos; Mujer distante e inaccesible; Poder magnetico; Ternura; Honestidad; Romanticismo; No muy expresivo; Relacion sin malas intenciones; Secretos sin malas intenciones","desc_trabajo":"Estudio; Nuevos contratos; Preparado mentalmente; Avance de carrera; Manten el conocimiento secreto","desc_salud":"Hacerse estudios; Embarazo posible; Psicologo; No haces caso a tu cuerpo; Enfermedades no descubiertas","desc_espiritualidad":"Mensajes vienen a ti; Otro punto de vista de la espiritualidad; Sal de tu zona de confort; Regreso a vidas pasadas; Muy despierta espiritualmenre; Estudio religioso","inv_general":"Retrosesos y obstaculos para proyectos; Agendas ocultas; No escuchas tu intuicion; No confias en ti misma; Descuidos; Olvidar; Falsa vidente","inv_amor":"Persona muy fria; Depresion; Bloqueo emocional; Temores y miedos; Manipulacion por inseguridades; Falta de sinceridad","inv_trabajo":"Insatisfaccion; El trabajo tarda en llegar; Secretos en el trabajo","inv_salud":"Buscar segundas opiniones; Dificultad para consebir; Aparato digestivo; Desequilibrios emocionales; Estado latente de salud","inv_espiritualidad":"Brujeria; Violar las leyes de la naturaleza; Trabajos energeticos mal intencionados; No quieres escuchar mensajes; Presta atencion a tus sueños","image_url":"https://upload.wikimedia.org/wikipedia/commons/8/88/RWS_Tarot_02_High_Priestess.jpg"},
+        {"carta_numero":3,"carta_nombre":"LA EMPERATRIZ","analisis":"Numero 3: la triada de la santisima trinidad. Armonia y equilibrio entre antagonismo y dualidad.; Asociado a la familia, éxito y conclusion.; Mujer joven (mas que la sacerdotiza); Abundancia de amarillo: es solar, vida practica, fertilidad y fecundidad; La corona: 12 estrellas, elevacion de pensamientos y relacion con el mundo feerico y angelico; Waite la describe como: refugio de pecadores, madre de miles; Vestido bordado con granadas: fertilidad, sabiduria, mundo espiritual; Embarazo: la emperatriz es la puerta a la vida; Cetro: simbolo falico y de poder (el poder de dar vida); Escudo: tiene forma de corazon y simbolo de venus, simbolo femenino por excelencia. A diferencia de Marcella (escudo en forma de aguila) Rider Waite la representa como el poder completamente femenino, sin aludir a ningun elemento masculino; Campo de trigo a los pies: solar, pan de cada dia, alimenta y da vida.; Demeter diosa de la agricultura. Madre y maestra sustentadora; Sillon rojo: placer (comodo) y sexualidad (rojo). Ella permanece erguida porque \"solo\" es un elemento de placer; Paisaje verde: poderes, riqueza, placer, fertilidad. Debemos reverenciarlo y tratarlo con sabiduria; Arroyo:conexión de lo espiritual y emocional; Perlas; abundancia y belleza","desc_general":"Fertilidad; Algo esta a punto de nacer; Ingenio e inteligencia; Madre, esposa, colaboradora; Familia; Creatividad; Amor maternal; Crecimiento; Proteccion; Misteriosa y sexual; Persona integra; Abundancia; Sabiduria; Embarazo","desc_amor":"Eres atractivo para los demas; Amor verdadero; Las relaciones son mas dulces; Comprension y armonia; Equilibrio entre sensualidad, armonia y sentimientos profundos.; Posible nuevo romance; Relaciones serias con futuro","desc_trabajo":"Persona capacitada; Creatividad; AscensoS; Inspiras a los demas en el trabajo; Trabajo estable y duradero","desc_salud":"Embarazos rapidos y exitosos; Curacion pronta y exitosa; Aparato reproductivo femenino; Soluciones naturistas o homeopatico","desc_espiritualidad":"Madre divina; Clarividencia; Bautismos; Viajes astrales","inv_general":"Creatividad bloqueada; Dependencia de otros; Embarazos no deseados; Problemas de fertilidad y concepcion; Algo falta; Sobreprotectora; Baja autoestima","inv_amor":"Varios amantes potenciales; Dudas de tu relacion; No te sientes valorada; Infidelidades; Persona egoista con su pareja","inv_trabajo":"Desacuerdo con compañeros o jefes; No eres conciente del aprecio que te tienen en el trabajo; Desacuerdos y desarmonias en el trabajo; Encontrar soluciones necesarias; NO anuncia despidos","inv_salud":"Falta de prevencion y control; Problemas de energia vital; Dolencias leves","inv_espiritualidad":"Escucha a las mujeres de tu vida; Acercate a la energia femenina; Maldiciones; Brujas negras","image_url":"https://upload.wikimedia.org/wikipedia/commons/d/d2/RWS_Tarot_03_Empress.jpg"},
+        {"carta_numero":4,"carta_nombre":"EL EMPERADOR","analisis":"Numero 4: Suerte, fiablididad, estabilidad, practico, paciente, logica, sobriedad, exitoso a largo plazo, capacidad de trabajo, honestidad, solidez; Personaje: severo, regio, patriarca, poder, autoridad, complemento de la emperatriz. Su barba larga representa experiencia y sabiduria.; Trono de piedra con figuras de carnero: dios egipcio Amon (rey de dioses), representan alturas intelectuales, determinacion, accion, iniciativa y liderazgo (Aries); Manto purpura: realeza, grandeza, proteccion (rey de reyes del tarot); Tunica roja: Accion, pasion, poder, activo; Armadura: guerrero, protector, activo; Corona: control autoritario mediante inteligencia, confianza, riqueza, padre, jefe.; Mano izquierda con bola dorada: poder universal, intuicion atravez de experiencias; Mano derecha con cetro: crux ansata o ankh que representa la vida eterna, la llave de la vida que solo el faraon puede llevar.; Paisaje arido y montañoso: opuesto a la emperatriz, le falta las cualidades femeninas.; El se dedica a proteger a la emperatriz y a proveerla para que su jardin crezca; Rio: no carece de lo espiritual, pero esta rodeado de lo terrenal.","desc_general":"Responsabilidad; Obligaciones; Crecimiento laboral; Hombre maduro; Padre; Jefe; Gerente; Autoridad; Estabilidad; Fortuna; Dominio de la mente sobre el corazon","desc_amor":"Lo material y sexual es importante en la relacion; Pareja mayor o en un estatus mas alto; Pareja protectora; Relacion estable","desc_trabajo":"Jefes, directores, gerentes; Autoridad y experiencia; Trabaja con ambicion y riqueza; Prestar atencion a la organización del tiempo y proyectos; Trabajo estable; Si buscas trabajo: usa la logica mas que la creatividad; Trabajos administrativos, militares, serios y ordenados","desc_salud":"Aparato reproductor masculino; Mejorar alimentacion y descanzo; Hay vitalidad y fuerza; Lucha con la enfermedad de forma objetiva e inteligente","desc_espiritualidad":"Padre celestial; Dios masculino; Debes prestar mas atencion a lo espiritual; Permite que la logica te ayude en tu crecimiento espiritual","inv_general":"Dominacion; Control excesivo; Inflexibilidad; Falta de concentracion y enfoque; No escucha consejos; Dictador","inv_amor":"Hombre machista; Dudas sobre la relacion; Celos; Manipulacion","inv_trabajo":"Perdida de poder; Actitudes abusivas; Actuar por interes; Fracaso de proyectos o empresa; Perdida de cargo; Inmadurez","inv_salud":"Falta de seguimiento medico; Rebeldia al tratar con la salud; Adicciones; Falta de autocontrol; Propenso a accidentes","inv_espiritualidad":"Espacio religioso sin libre pensamiento; Religion cuadrada; Sectas","image_url":"https://upload.wikimedia.org/wikipedia/commons/c/c3/RWS_Tarot_04_Emperor.jpg"},
+        {"carta_numero":5,"carta_nombre":"EL PAPA","analisis":"Numero 5: perdida, tristeza, tiempos dificiles, necesidad de cambio, nueva mentalidad, meditacion, religion, versatibilidad; Hierofante: sacerdotes de la antigua Grecia que dirigian los cultos Eleusis en honor a la diosa Demeter.; Significa “el que muestra lo santo o sagrado”, que es mas general que el Papa que es cristiano.; Ropa blanca con cruces: representa pureza y capacidad como iniciador de fe; Ropa azul: espiritualidad, fe; Ropa roja: es la ropa de los papas, representa autoridad; Corona: 3 niveles del universo (animico, espiritual y material); Mano izquierda con triple cruz: dominio sobre cuerpo, mente y alma o 3 virtudes teologales: fe, esperanza, caridad; Mano derecha: posicion de bendicion (parecido al mago pero manifiesta atravez de la religion); Llaves cruzadas: conocimiento interno y externo, espiritual y material.; Tambien representan las llaves de este mundo y el otro; Columnas grises: es iniciador pero no abre las puertas al inconciente o sabiduria interior (a diferencia de la sacerdotiza), son grises porque pertenecen a la institucion; Clerigos: uno con una tunica con lirios (actitud activa: quiere atender y servir) y otro con tunica de rosas (actitud pasiva o contemplativa: escucha); Estola amarilla de los clerigos: ambos son iguales, ambas vias de conocimiento equivalen lo mismo; Polaridad con el diablo: cartas parecidas, el diablo es la sombra del sumo sacerdote.; El sumo sacerdote da esperanza, el diablo te hace creer que todo esta perdido.; El sumo sacerdote te invita (sin obligarte) a iniciar el camino de la fe, el diablo te invita (tambien sin obligarte) a darle prioridad a lo material y carnal","desc_general":"Persona con mucho conocimiento; Moderado; Buen consejero; Apoyo incondicional; Hacer lo correcto; Valores morales, sociales y culturales; Normas sociales; Llamado al camino espiritual; Valores altos; Equilibrio","desc_amor":"Matrimonio; Familia; Empatia; Almas gemelas; Se necesita un mediador; Relacion tradicional","desc_trabajo":"Aparece un maestro o mentor; Jefes; Negociaciones; Ventas; Publicidad; Jubilacion; Escuela y profesores","desc_salud":"Especialistas; Medico de cabecera; Cirujano; Dolores cervicales","desc_espiritualidad":"Maestro interno; Lideres religiosos; Mucho por aprender; Se necesita contemplacion, meditacion u oracion; Institucion religiosa o grupo espiritual","inv_general":"Restricciones; Tentaciones retenidas; Desafio a las normas sociales; Persona perdida espiritualemente; Alguien no quiere que triunfes; Presion por un grupo","inv_amor":"Agotamiento por rutina; Necesitas salir de tu rol habitual; Alienta a tomar accion para buscar diferentes resultados","inv_trabajo":"Rebeldia en el trabajo; Evadir responsabilidades; Disconformidad con trabajo, compañeros y jefes","inv_salud":"Cambiar rutinas; Se necesita segunda opinion; No es buen momento para el embarazo; Trastornos del sistema digestivo","inv_espiritualidad":"No hay deseo de participar en grupos religiosos; Dedica tiempo en soledad a la espiritualidad","image_url":"https://upload.wikimedia.org/wikipedia/commons/8/8d/RWS_Tarot_05_Hierophant.jpg"},
+        {"carta_numero":6,"carta_nombre":"LOS ENAMORADOS","analisis":"Numero 6: Restaurar la armonia despues del caos, nuevo comienzo dificil pero que mejora nuestra situacion, belleza, matrimonio, empatia, perfeccion.; En Marcella: un hombre con dos mujeres (virtud y vicio) bajo la mirada de cupido.; Desnudez: inocencia primigenia del hombre; Eva: delante del arbol del bien y el mal con serpiente.; Ella esta cumpliendo con la ley secreta de la providencia, iniciando al hombre en la vida ferrenal y sensual.; Ella tiene conocimiento y conciencia, por lo que mira al angel sin miedo (a diferencia de adan); Arbol del bien y el mal: 5 manzanas que representan los sentidos; Adan: Delante del arbol de la vida; Arbol de la vida: tiene 12 frutos semejantes a llamas: representan los 12 signos del zodiaco (simbolo de la eternidad).; Los 2 personajes: son dos mitades de un todo; Angel: representa la union y el refinamiento de los deseos mundanos. Tiene un semblante comprensivo y sereno.; Piel transparente que deja ver la luz de sol de atrás que representa la iluminacion en un plano superior.; Cabellos marrones y verdes representando la naturaleza en su estado elevado (sexualidad).; Tiene alas rojas y tunica morada que simbolizan sabiduria y magia.; Angel Raphael, el angel del aire: se necesita comunicación para lograr una buena relacion; Miradas: el hombre mira a la mujer y ella al angel: conciente al subconciente y de emociones a la espiritualidad; Sol: Seguridad, felicidad, proteccion y claridad; Tierra con pasto: fertilidad, prosperidad; Monte de atrás: representa que la union es elevacion.; Tambien representa un simbolo falico; La nube: representa el agua y es simbolo femenino, haciendo equilibrio con la montaña.; La union de las energias masculinas y femeninas daran como resultado un ser mas pleno y completo en todos los niveles","desc_general":"Libre albedrio; Elegir un camino; Amor; Pareja; Deseo sexual; Reflexion o duda; Entrega a un ser querido; Armonia; Reunion; Fidelidad","desc_amor":"Matrimonio; Amor fraternal; Amor profundo; Elegir entre 2 personas; Pareja ideal; Hijos; La relacion se consolida y refuerza; Reencuentro con pareja anterior que esta vez sale bien.","desc_trabajo":"Creatividad; Arte; Ventas positivas; Compañerismo; Varias ofertas de trabajo; Dudas para resolver problemas; Alianzas provechozas; Negocios con familiares, amigos o pareja","desc_salud":"Debes cuidar tu alimentacion; Dieta equilibrada; Organos pares: pulmones, riñones, ojos, etc; Sanacion Reiki; Dudas del tratamiento a seguir","desc_espiritualidad":"Camino espiritual en pareja; Transmitir energia curativa; Estas lista para confrontar tu lado espiritual y hacer los cambios que se necesitan; Maestro espiritual viene a ti","inv_general":"No quieres tomar decisiones; Desarmonia; Desamor; Desunir; Incertidumbre; Sentimientos y valores desalineados; Dudas y cuestionamientos emocionales; No hay compatibilidad; Deciciones incorrectas","inv_amor":"Infidelidad; Sentimientos no correspondidos o en desarmonia; Ruptura; Querer cambiar de pareja; Sentimientos dirigidos a quien no lo merece; Enfriamiento de una relacion","inv_trabajo":"Malas elecciones para resolver dudas problemas; Advierte de no confiar; Envidias y celos profesionales; Desacuerdos o disputas en negocios familiares o en pareja; Tentaciones romanticas o sexuales en el trabajo","inv_salud":"Diagnostico o medico no correctos; Posibilidad de accidente; Angustia o depresion por problemas amorosoS; Problemas de autoestima; Postergacion de cuidados","inv_espiritualidad":"Puedes enamorarte de tu mentor espiritual; Mente cerrada","image_url":"https://upload.wikimedia.org/wikipedia/commons/d/db/RWS_Tarot_06_Lovers.jpg"},
+        {"carta_numero":7,"carta_nombre":"EL CARRO","analisis":"Numero 7: estructura organizada y perfecta, es la combinacion del 3 y 4 (espiritu mas materia) el ser superior a la materia.; Joven en un cuadrado: el cuadro representa la tierra por lo que el joven tiene dominio y soberania sobre el cuerpo, pasiones y el mundo material.; Toldo de estrellas: Tiene multiples estrellas de 6 puntas que representan protecciondel universo para garantizar la victoria.; Corona con estrella: simbolo de inteligencia e iluminacion; Lunas en los hombros: una rie y la otra llora, son llamadas Urim y Thummin (joyas de sacerdotes judios que les permitian consultar la voluntad de Yave en cada momento).; Representen una realidad cambiante que el alma en equilibrio sabe controlar.; Cuadro en el pecho: en el alma del joven reina la estabilidad y el equilibrio.; Cetro: representa el éxito, la conquista de lo material; Simbolo al frente del carro: simbolos sexuales hindues lingam y yoni (falo insetado en la vagina).; Arriba de esto esta el sol alado o Behdety el dios del sol de medio dia de Egipto y representa la divinidad, realiza, poder, proteccion y eternidad.; Es decir, todo esto representa la union de lo femenino con lo masculino, el yin y el yang todo por debajo de la proteccion divina; Esfinges: NO llevan riendas, por lo que son conducidos solo con la voluntad.; Uno blanco y el otro negro representando los instintos mas puros y bajos.; La esfinge propone enigmas, lo que pone a el joven a la par con Edipo.; El joven es sabio y domina con templanza sus pasiones.; Velo detrás: es el velo de la sacerdotiza y permanece cerrado.; El joven no sabe decifrar el libro de la tora de la sacerdotiza.","desc_general":"Movimiento; Viajes; Triunfo; Conquista; Fuerza de voluntad; Determinacion y decision; Desplazamientos; Alto rango; Razon y emocion para lograr tus propositos; Incluso si esta rodeada de cartas negativas garantiza el éxito; Energia y autonomia; Persona publica; Exportaciones; Liderar; Hablar en publico","desc_amor":"Relacion temporal; Pareja calida y apasionada; Querer ir demasiado rapido; Es momento de tomar accion; El amor avanza victorioso (cuando se maneja correctamente); Superar relaciones pasadas; Regreso de viejos amores; Nuevo amor en un viaje; Amor que viene de lejos; Equilibrio y proteccion mutua; Fidelidad","desc_trabajo":"Negociaciones favorables; Abundancia; Periodismo, medios de comunicación; Lider; Viajes de negocios; Deportistas, militares y ejecutivos; Nuevos trabajos u oportunidades; Cambio de oficina o lugar de trabajo; Fuerzas fisicas y mentales para el trabajo; El esfuerzo tiene premio; No te distraigas con problemas pequeños","desc_salud":"Buena salud y vitalidad; Acondicionamiento fisico; Aparato locomotor; Aconseja no cometer excesos y descansar","desc_espiritualidad":"Aprenderas en un lugar lejano; Viaje astral; Seminarios y charlas espirituales","inv_general":"Actividad mal dirigida; No hay dominio; Accidentes; Metas no adecuadas; Evitar riesgos innecesarios; Fracaso; Inmovilidad; Importar; Miedo escenico; Prepotencia; Agresion; Insertidumbre; Enojo, agresividad y dolor; Debes recuperar el control","inv_amor":"Se debe encontrar equilibrio en la relacion; Estancamiento en la relacion; La relacion sufre por viajes; La relacion no florece o es fugaz; Metas distintas en la pareja; Falsas promesas; Engaños","inv_trabajo":"Perdida de objetividad; No hay objetivos claros; No se tiene inteligenia y tenacidad para lograr lo que se quiere; Dispersion; Inestabilidad laboral; Salario bajo o injusto; Persona que afecta tu trabajo","inv_salud":"Recaidas en enfermedades; Accidentes; Cuidado con comer fuera; Lesiones por mala coordinacion de actividad fisica; Falta de coordinacion; No es el momento de viajar","inv_espiritualidad":"Dejas el camino a la mitad; No te dejes influenciar; Analiza si el grupo donde estas te otorga de verdad lo que buscas","image_url":"https://upload.wikimedia.org/wikipedia/commons/9/9b/RWS_Tarot_07_Chariot.jpg"},
+        {"carta_numero":8,"carta_nombre":"LA FUERZA","analisis":"Numero 8: equilibrio y orden cosmico, es el numero mas alla de la perfeccion y representa el universo.; Es el primer numero cubico por lo que representa al elemento tierra pero en su dimencion.; En el buddismo el dharmachakra (rueda de la verdad) tiene 8 radios por los que hay que transitar.; Para los paganos existen 8 sabbats en la rueda del año.; Numero 11: en otros tarots esta carta aparece con el numero 11. Waite no dio razones por las que cambio el numero.; En el grupo Golden Dawn (donde Waite era parte) otros dicipulos cambiaram o numero tambem ja que o 8 representa a leo e o 11 a libra, de forma que a força esta relacionada com o leao e a justiça com a balança.; Cielo amarillo: éxito, inteligencia, dominio sobre la materia; Personaje: es una joven hermosa y joven. Tiene cabellos dorados que hablan de su naturaleza solar, fuerza y energia; Lemniscata: tambien conocido como el simbolo del infinito que representa sabiduria divina y universal.; Vestimenta: lleva vestido blanco (pureza) y flores en el cuerpo y cabeza que nos hace ver que es una doncella pura y con dominio sobre las pasiones; El cinturon de flores: Aunque no se ve, con este sostiene el cuello del leon (según waite) representando la suave firmeza con la que la fuerza domina al leon; El leon: simbolo de la fuerza solar. Se deja dominar por la fuerza que no es fisica.; Representa tambien los instintos mas bajos. Saca la lengua por que devuelve el amor recibido, no atacara; Brazos del personaje: el brazo izquierdo representa el esfuerzo mental y ejerce toda la fuerza mientras que el derecho representa el esfuerzo fisico y solo sujeta; Tipo de fuerza: domina las pasiones (como el carro), tiene la sabiduria del mago (infinito) y la espiritualidad de la sacerdotiza.; Autoconocimiento y elevacion a lo divino (evolucion del carro)","desc_general":"Fortaleza; Fuerza fisica y espiritual; Manejo de situaciones; Coraje; Paciencia; Control; Compasion; Persona fuerte y resistente; Confianza en uno mismo; Situacion dificil que necesitara de esfuerzo para salir de ella; Paz espiritual y elevacion; Dominio de las pasiones y los instintos; Energia y creatividad; Liberar; Comunicación","desc_amor":"Dulzura; Afecto; Sexualidad; Control sobre las pasiones y sentimientos; Proteccion del ser amado; Si hay conflictos estos se solucionan; Apoyo mutuo, tolerancia y comprension; Relacion que avanza; Romanticismo","desc_trabajo":"Encuentras trabajo gracias a tus conocimientos y habilidades; Negociaciones favorables; Nuevo negocio o emprendimiento que sale bien; Se resuelven problemas laborales; Usa tu creatividad; Trabajos de direccion; Trabajo pesado pero sale bien","desc_salud":"Buena salud; Sale delante de la enfermedad; Corrije tus habitos; Momento correcto para cirujias; Momento para deshacerte de habitos nocivos; Reiki, fisioterapeuta, quiropractico","desc_espiritualidad":"Milagros; Don de curacion; Encuentra el equilibrio entre cuerpo, mente y espiritu; Fuerza espiritual y emocional para avanzar","inv_general":"Psicologicamente vulnerable; Falta de amor propio; Persona que reacciona con coraje; Hombre maltratador; Tirania y fanfarroneria; Violencia; Oprimir; Discutir; Debilidad; Ceder; Inseguridad; Falta de auto disciplina; Sin voluntad; Baja autoestima","inv_amor":"El futuro de la relacion esta en duda; Frialdad y distanciamiento; Dudas de la pareja; Celos; Perder la paciencia; Llegada de conflictos","inv_trabajo":"Accidentes por agotamiento fisico; No estas dotado fisicamente para el trabajo; Convives en el trabajo con personas violentas y tiranicas; No hay avances en el trabajo; Apatia, cansancio, aburrimiento e insatisfaccion; No es momento de buscar nuevos proyectos","inv_salud":"No estas en forma; Cansancio; No se aconseja cirujia o tratamientos fuertes; Tentacion de malos habitos; Problemas circulatorios; Desmayos por agotamiento","inv_espiritualidad":"Falta seguridad en tu espiritualidad; Se necesita contacto con la naturaleza","image_url":"https://upload.wikimedia.org/wikipedia/commons/f/f5/RWS_Tarot_08_Strength.jpg"},
+        {"carta_numero":9,"carta_nombre":"EL ERMITAÑO","analisis":"Numero 9: culminacion del tiempo y de todos los numeros. Significa realizacion, sabiduria, busqueda de la verdad.; Barba blanca: simbolo de sabiduria y pureza; Manto gris: representa proteccion y escudo contra las tentaciones y cambios del mundo exterior. Tambien representa austeridad; Postura: representa lentitud y paciencia; Reloj de arena: Hasta finales del siglo XV El Ermitaño llevaba un reloj de arena, ya que se le consideraba una representación del Padre Tiempo o Saturno, dios del tiempo;; después se cambió el reloj por una lámpara, ya que se asoció al Ermitaño con Diógenes, el filósofo cínico griego que según la leyenda vagabundeaba en pleno día con una lámpara encendida \"buscando a un hombre\"..; Diferencia con Marcella: en el tarot de marcella se oculta la lampara con el manto, Waite decide dejarla al descubierto porque la sabiduria, la luz del mundo no es solo del hermitaño, sino que la muestra para invitarte a llegar a donde esta el; Estrella salomonica: simbolo de la excelencia, sabiduria y perfeccion. Tambien es la conjuncion de 2 triangulos: agua y fuego, consiente e inconciente.; Representa la proteccion eccion libre para aquellos que buscan la sabiduria.; Baculo: es amarillo para representar la energia solar. Pone al hermitaño en contacto con la tierra y la realidad.; Montaña: representa la altura espiritual pero sin alejarse del mundo.","desc_general":"Persona de edad y solitaria; Celibato; Introversion; Castidad; Sabiduria; Prudencia; Consejero; Iniciacion; Persona fria; Amistad incondicional; Introspeccion; Autoconocimiento; Estudios; Reflexion","desc_amor":"Debes poner distancia; Momentos dificiles en la relacion; Viejo amor regresa (piensalo bien); Invita a relfexionar en las relaciones; Persona solitaria; Alejamiento de la pareja; Falta de comunicación; Ruptura (por necesidad de soledad)","desc_trabajo":"Se necesita buscar trabajo; Filosofia o sacerdocio; Consejo: paciencia y prudencia; Investigacion cientifica; Problemas economicos; Cuesta conseguir trabajo; Austeridad y tendencia al ahorro; No es buen momento para nuevos proyectos laborales; Momento para estudios; Jubilacion; Estancamiento laboral; Geriatrico, biologia, investigaciones, laboratorios; Analisis; Laboratorios","desc_salud":"Salud estable pero no solida; El tratamiento es benefico pero lento; Dolencias cronicas; Problemas de edad avanzada; Problemas de espalda; Problemas de memoria","desc_espiritualidad":"Mento o maestro espiritual; Necesidad de meditacion; Espiritualidad en solitario; Tienes las capacidades espirituales para seguir avanzando","inv_general":"Imprudencia; Crisis; Ignorancia; Perder; Desconocer; Soledad extrema; Muy introvertido y/o reservardo; Impotencia sexual; Problemas que no se sabe cuando se resolveran; Aislamiento que se necesita; Aislamiento perjudicial","inv_amor":"No hay comunicación; Ruptura de la relacion; Sin empatia; Se necesita mejorar la comunicacion","inv_trabajo":"Problemas laborales; No cumples con los objetivos del trabajo; Obstaculos en tramites; Incapacidad para trabajar en equipo; Lejania con compañeros de trabajo; No hay entusiasmo; Trabajo pesado, desagradable e interminable","inv_salud":"Caidas; Fracturas; Problemas oceos y vertebrales; Reumatismos; Problemas ocacionados por el frio; Enfermedades cronicas irreversibles; Lentitud en la recuperacion (mas que al derecho)","inv_espiritualidad":"Es necesario que veas otros puntos de vista; Para avanzar busca un grupo; Estancamiento espiritual","image_url":"https://upload.wikimedia.org/wikipedia/commons/4/4d/RWS_Tarot_09_Hermit.jpg"},
+        {"carta_numero":10,"carta_nombre":"LA RUEDA","analisis":"Numero 10: representa la totalidad del cosmos: 1 (dios)+2(materia)+3(mundo fisico)+4(reproduccion). No es el inicio ni el fin, sino el comienzo a un orden superior.; La rueda: representa la suerte cambiante del humano; Hermanubis: fusion del dios griego Hermes y el egipcio Anubis. Ambos guian las almas.; Es de color rojo ya que representa la energia e inteligencia creativa que hay dentro de cada alma.; Esfinge: es de color azul ya que representa el inconciente, misterio de la vida, el triunfo (espada) y estabilidad.; Representa al díos egipcio Horus de la resurreccion; Tifon-Set: dios de la destruccion, fusion de los dos monstruos que intentaram destruir a Zeus (Tifon) y a Osiris (Set).; Representa la oscuridad y la destruccion, todo triunfo es pasajero, se diluye o destruye.; Tetramorfos: 4 figuras en los extremos, aparecen en el antiguo testamento.; Representan a los cuatro evangelistas: Mateo, Lucas, Marcos y Juan (El angel, el leon, el toro y el aguila respectivamente).; Pueden representar los 4 elementos: leon=fuego, toro tierra, angel=agua y aguila aire.; Los 4 signos zodiacales fijos: leon=leo, tauro=toro, angel acuario, aguila=escorpio. Representan la creacion y la destruccion; Libro de las figuras: Se trata del TORA nuevamente que representa la sabiduria; O El nombre de dios: cuatro consonantes hebreas del nombre de Dios YHVH.; A este conjunto de letras le llamamos el tetragramaton, fue considerada como la palabra magica mas poderosa.; Representa la providencia que domina la fortuna y lo controla todo.; TARO: Puede leerse de varias maneras: empezando y terminando con la T=TAROT, empezando en la R=ROTA (rueda en latin), al reves=TORA (pergamino de la sacerdotiza).; Representan que la fortuna esta influenciada por la sabiduria humana y la ley divina.; Simbolos en medio: Se trata de los simbolos alquimicos de los 4 elementos; Divisiones en la rueda: La rueda se divide en 8 partes representando el orden natural o los sabbats de la rueda del año.; Representa el ciclo natural del mundo.; Cielo azul: representa el inconciente humano","desc_general":"Dinamismo; Optimismo y suerte; Movimiento; Destino; Vida y karma; Rapidez; Fin de un ciclo; Normalmente positiva; Cambios inesperados o destinados; Evolucion de un estancamiento; Todo tiene un tiempo (bueno y malo)","desc_amor":"Cambios constantes en la relacion; Regresar con un amor; Cometer los mismos errores; Nuevos amores; Superacion de una relacion pasada; Inestabilidad en la relacion; Sentimientos que cambian; En ocaciones indica el reforzamiento y revitalizacion de los sentimientos","desc_trabajo":"Traslados; Maquinas; Vehiculos; Cambio de trabajo (para bien); Comercio y negocios favorables; Sabes como llegar a la cima; Ganancias; Necesario adaptarse con rapidez; Obtienes el puesto o ascenso que buscas; Emprendimientos que salen bien, incluso contra las posibilidades","desc_salud":"Subidas y bajadas en la salud; Enfermedad que ha estado estancada se resuelve; Vitalidad; Recuperacion veloz; Es necesario realizar cambios y no estancarse; Circulacion de la sangre; Respiracion","desc_espiritualidad":"Precencia de espiritus; Tus guias quieren contactar contigo; Karma; Evolucion espiritual","inv_general":"Las cosas tardan pero se logran; Rutina; Mala fortuna; Perdidas; Fin de un ciclo positivo; Aparicion de obstaculos; Beneficios que duran poco; Resistencia al cambio","inv_amor":"Relacion pasajera; Perder a un amor antiguo; Confusion en los sentimientos; Cambio de sentimientos contra nuestra voluntad y deseos; Puede indicar una tercera persona en la relacion que causa conflictos; Hay resistencia al cambio; No te sientes conforme con la relacion","inv_trabajo":"Retrasos en entregar; Malos negocios; Analisis de negocio que no sale bien; Ideas que no resultan como queremos; Cambios en el trabajo (bueno o malo depende de lo que salga alrededor); No se recomiendan cambios","inv_salud":"Caida del estado vital; Gripa, problema intestinal (no es de gravedad); Recaida a una enfermedad; Estrés que causa problemas de salud; No es momento de cirujias","inv_espiritualidad":"No debes resistirte al cambio; Es necesario trabajo de sombras; No encuentras tu camino espiritual","image_url":"https://upload.wikimedia.org/wikipedia/commons/3/3c/RWS_Tarot_10_Wheel_of_Fortune.jpg"},
+        {"carta_numero":11,"carta_nombre":"LA JUSTICIA","analisis":"Numero 11: Indica estabilidad y transgresion. Se trata de un numero maestro.; En la cultura china se habla del número once como el camino total que hay entre el cielo y la tierra, representando así las fuerzas cósmicas que equilibran y ajustan el universo.; No lleva venda: Porque atiende a ver claro no a discriminar a nadie.; Personaje androgino: Se trata de una mujer de aspecto casi severo; Vestimentas rojas: Es un personaje de aspecto activo, concreto y material.; No se eleva mas alla de lo humano aunque su valor moral es importantisimo; Manto, estola y corona amarillos: energia solar e inteligencia para impartir justicia; Joya azul en la corona: Aunque la justicia es completamente terrenal no esta totalmente desligada de la espiritualidad.; Sus pensamientos estan bien ordenados (cuadrado); Ornamento cuadrado en el pecho: representa la ley que protege y el estado eterno de unidad dentro de los humanos; Velo de atrás: A diferencia de la sacerdotiza este es de color purpura y representa la compacion limitada por el mundo fisico (pilares grises); Columnas: No son las columnas de la sacerdotiza. Pertenecen al mundo terrenal puesto que este es el campo de la justicia de la que habla esta carta.; Representan tambien la dualidad: lo bueno y lo malo, lo positivo y lo negativo; Espada: simbolo de fuerza y energia. Es azul ya que la fuerza que posee es de elevacion moral.; Tiene doble filo ya que corta en ambos sentidos representando asi la imparcialidad; Balanza: representa el equilibrio, equidad sin apasionamiento. La sostiene con la mano intuitiva mostrando que la logica debe de ser equilibrara por la intuicion; Zapato blanco: representa las consecuencias espirituales de nuestras acciones","desc_general":"Responsabilidad; Decision; Causa y efecto; Igualdad e imparcialidad; Equilibrio; Justicia; Rectitud; Verdad; Aprobar; Situacion que hay que contemplar; Conciencia de tus actos; Analizar la situacion; Ley y normas; Honestidad; Resultado positivo pero tardado; Multas; Sesiones civiles o penales; Persona creible y confiable","desc_amor":"Estabilidad en la relacion; Superar conflictos; La verdad sale a la luz y regresa el equilibrio; Replantear una relacion problemática; Persona fria; Relacion que debe buscar un equilibrio","desc_trabajo":"Abogados y jueces; Tramites judiciales; Papeleos; Inmobiliarias; Contratos; Juicio que se gana; Legalizacion de contratos; Controlar gastos; Cuestiones legales en curso; Momento para asociaciones; Inversiones que salen bien; Golpe de suerte en el dinero; Cobrar deudas; Herencias o devolucion de impuestos","desc_salud":"Estabilidad; Pruebas medicas generales; Obesidad; Se solucionan los problemas medicos","desc_espiritualidad":"Karma; Puede que estes reprimiendo tu energia; Buscar equilibrio espiritual","inv_general":"Persona que huye de su pasado; Falta de rendicion de cuentas; Deshonestidad; Inmoralidad; Lo que siembras cosechas; El que la hace la paga; No haceptas responsabilidades; Sientes que no hay justicia; Desequilibrio; Malas intenciones; Falsedad","inv_amor":"Falta de sentimientos; Ruptura de lazos sentimentales; Persona fria; Engaños y secretos; Terceros afectando la relacion; Falta ocuparte de tu parte en la relacion","inv_trabajo":"Injusticias en el trabajo; Desarmonia laboral; Estancamiento; Deciciones equivocadas; Contratos frustrados","inv_salud":"Problemas de metabolismo, funcion renal o lumbalgia; Desequilibrios emocionales; Necesidad de cuidarse a uno mismo","inv_espiritualidad":"Debes trabajar en estar centrado; Se necesita anclajes; Falta de compasion; Necesidad de aliviar emociones negativas","image_url":"https://upload.wikimedia.org/wikipedia/commons/e/e0/RWS_Tarot_11_Justice.jpg"},
+        {"carta_numero":12,"carta_nombre":"EL COLGADO","analisis":"Numero 12: representa la elevacion del 3 (1+2), es decir la planificacion cuidadosa y crecimiento que conduce al desarrollo espiritual.; Indica el equilibrio entre el interior (1) y exterior (2).; Personaje: joven de cabello dorado (inteligencia). Su semblante es pacifico ya que se encuentra concentrado en la contemplacion y no en el sufrimiento; Aureola: representa la iluminacion y conocimiento; Ropa: El viaja profundo desde el conciente (rojo) hasta el inconciente (azul).; Es decir del mundo material hasta la elevacion espiritual. Todo esto trabajando su interior.; Zapatos: no llegan a ser dorados lo que nos indica que solo las ideas del colgado estan cerca de lo divino, no sus pasos; Pocicion de las piernas: se forma una cruz evastica, simbolo religioso y de proteccion y de buena suerte.; Simbolo alquimico del azufre: si miramos la forma completa del colgado veremos el simbolo alquimico del azufre, que corresponde al fuego y al principio masculino, y que nos recuerda que la espiritualidad no es solo contemplativa, sino también activa.; Es decir su postura es activa y voluntaria.; Arbol: tiene la forma de cruz Tau que es simbolo de vida y resurreccion.; Esta cubierto de hojas verdes ya que es simbolo de vida no muerte","desc_general":"Atadura fisica, psicologica o espiritual; Renuncia; Sacrificio; Autorealizacion; Persona altruista; Cambio de perspectiva; Decisión correcta que nos cambia; Dejarse llevar; Saber renunciar a algo; Meditacion necesaria; Suspensión; Postergacion de planes; Pasividad","desc_amor":"Dejar ir; Persona dependiente; Dificultad para superar errores del pasado; Necesidad de pausa en la relacion; La relacion no se mueve; Inconformidad; Demasiados sacrificios","desc_trabajo":"Voluntariados o servicios humanitarios; Cambio al empleo deseado; Esperas un cambio; Psicologos, espirituales o artistas; Debes ser menos apatico; Tu sacrificios por la empresa no tienen recompenza; Comunicación pobre en el trabajo; Trabajo cotidiano que da frutos","desc_salud":"Miembros inferiores; Depresion; Baja autoestima; No te cuidas; La mejoria llega lentamente y con sacrificios","desc_espiritualidad":"Debes dejar de lado las creencias negativas; Se requiere meditacion y autoconocimiento; Busca nuevos caminos y puntos de vista; Don de videncia; Premoniciones","inv_general":"Persona que aparenta sacrificarse pero solo piensa en su ego; Persona materialista; Estancamietno afectivo; Decir pero no hacer; Egoismo; Empeñarse en el punto propio de vista; Aplazamiento de las cosas; Obligacion a renunciar","inv_amor":"Amor no compartido; Falso amor que arruina fisica y moralmente; Relaciones rapidas y sin futuro; Momento de dejar ir relaciones que hacen daño; Debes dejar ir idealismos sobre tu pareja","inv_trabajo":"Despidos; Inconformidad con el empleo; Hechar culpas a todo y todos; Falta motivacion; Estafas; Perdida de dinero por engaños; Gastar a lo tonto","inv_salud":"No haces caso a las señales del cuerpo; Accidentes en casa; Problemas en piernas","inv_espiritualidad":"Fanatismo; Falso vidente o profeta; Sectas; Problemas de la infancia que no te dejan en paz","image_url":"https://upload.wikimedia.org/wikipedia/commons/2/2b/RWS_Tarot_12_Hanged_Man.jpg"},
+        {"carta_numero":13,"carta_nombre":"LA MUERTE","analisis":"Numero 13: representa la agitacion y la energia karmica. Também se reduce a 4 (1+3=4), lo que refleja la fuerza y la estabilidad y se enlaza con la carta de los principales arcanos, El Emperador (IV).; Al considerar ambos significados asociados con el 13, muestra un patrón de estabilidad, fuerza y nueva conciencia que surge de un trastorno o cambio necesario (kármico).; Esqueleto: es amarillo indicando que es parte de la energia vital.; Armadura negra: el negro absorve todos los colores asi como la muerte absorve todas las vidas; Caballo blanco: el color que repele todos los colores. Hace contraste con el negro marcando asi un equilibrio.; Blanco y negro: si miramos la figura de la muerte en un todo veremos que nos habla del juego constante entre vida y muerte y como sin una no puede existir la otra; Estandarte: Nuevamente de color blanco y negro marcando el contraste entre vida y muerte.; Tiene una rosa mistica simbolo de vida y realizacion plena.; Indica que para alcanzar la vida hay que ceder ante la muerte.; Sol naciente: esta flaqueado por dos pilares simbolos de sabiduria necesaria para encontrar la resurreccion.; Waite lo llama el sol de la inmortalidad. Nos indica que despues de la oscuridad hay luz, despues de la perdida viene un nuevo inicio.; Paisaje: no es infertil, a lo lejos podemos ver arboles, agua, un bote incluso.; Esta no es una carta totalmente negativa; Rio: representa la renovacion y circulacion de las circunstancias.; Barco: se trata de la barca que transporta a las almas en el rio Estix en la mitologia griega; 4 personajes: tenemos a los 4 personajes que representan a toda la humanidad: el rey, el sacerdote, doncella y la niña.; Nos dice que la muerte no distingue entre edad, sexo o raza; Rey: su corona y cetro estan caidos lo que representa que el orgullo y el aferro a las riquezas y poder crea resistencia al cambio inevitable.; Para estas personas el cambio es doloroso y una muerte verdadera; El sacerdote: se rinde a la muerte, serenoy tranquilo. Su espiritualidad le permite aceptar la situacion con calma.; Lleva ropas amarillas indicando la esperanza en la vida; La doncella: se rinde a medias, ya que se aferra a los placeres de la vida, que apenas ha empezado a saborear, y como todos los jóvenes al hacerse adultos, intenta volver la cara a las amarguras y cambios de la vida, aun sabiendo que són necesarios e inevitables.; La niña: es inocente, lo que hace que se acerque a la muerte y le ofrezca flores.; Es decir que abraza el cambio, la resurreccion y la evolucion.; Fondo gris neutro: representa imparcialidad","desc_general":"Transformacion profunda; Profundos sacrificios; Renuncias; Cambios; Valor; Enfocate en lo positivo; Algo que debe morir para avanzar; Renovacion; Perdida dolorosa; No debes quedarte en tu zona de confort; Finales de ciclos; Dejar ir","desc_amor":"Rupturas; Divorcios; Perdida de sentimientos; Terminar una relacion por otra mejor; Obstaculos superados","desc_trabajo":"Nuevos proyectos e ideas; Nuevas oportunidades; Finalizar una etapa; Agricultura y jardineria; Despidos; Traslado a otros departamentos; Cambio de trabajo","desc_salud":"Deterioro de energia vital; Anorexia; Operaciones; Cirujias plasticas; Huesos, espalda y dientes; Enfermedad que requiere de operación; Cirujias que tendran consecuentas","desc_espiritualidad":"Renovacion completa del yo; No luches contra el cambio; Contacto con seres fallecidos; Vencer el ego; Final de una etapa para empezar en otra mas elevada","inv_general":"Te aferras al pasado; Estancamiento; Censecuencias inevitables; Perdonar personas del pasado; Temor; Destruir; Resistencia al cambio; Tristeza; Negarse a olvidar; Pesimismo o pasividad","inv_amor":"Infidelidades; Rupturas; Cambios en la actitud de la pareja; Relaciones que se complican; No conoceras a las personas adecuadas; Necesidad de mejorar la comunicación; Abandono; No superar relacion que termino","inv_trabajo":"Estancamiento de un proyecto; Conformismo; Resistencia a cambios laborales; Perdidas importantes de dinero por malas inversiones; No debes prestar dinero","inv_salud":"Caidas o accidentes; Fracturas; Problemas que se complican","inv_espiritualidad":"Malas energias; Bajo astral; Es necesario fortalecer las protecciones energeticas; Trabajo de sombras necesario","image_url":"https://upload.wikimedia.org/wikipedia/commons/d/d7/RWS_Tarot_13_Death.jpg"},
+        {"carta_numero":14,"carta_nombre":"LA TEMPLANZA","analisis":"Numero 14: representa la trasmutacion, metamorfosis, cambios. Tambien representa el equilibrio y la estabilidad. Tranquilidad, felicidad y flexibilidad; Angel: se trata de un ser hermafrodita (hijo de hermes y afrodita) mostrando el equilibrio entre los sexos; Alas del angel: al ser rojas nos indican que su espiritualidad esta profundamente arraigada a lo terrenal; Simbolo de la cabeza: es el simbolo del sol. Indica su iluminacion e inspiracion.; Tiene un aura que tambien indica esto.; Simbolo del pecho: se trata de un cuadro con un triangulo dentro, este es el simbolo teosofico del septenario o los siete principios del hombre.; Indica que este personaje es divino y humano a la vez.; Tetragramatron: encima del septenario. Se trata del nombre de dios YHVH escrito en letras hebreas.; Indica la presencia de la divinidad por encima del humano; Copas: el agua que pasa entre ellas es la escencia de la vida.; Representa como la verdadera sabiduría radica en pasar de un reino a otro, de lo material a lo espiritual, sin perder nada ni vacilar en el proceso.; Se dice que en realidad el agua esta pasando de la copa de abajo a la de arriba simbolizando pasar de un plano inferior al superior; Pies: uno está en la tierra y otro en el agua., es decir, un pie en el plano consciente y otro en el inconsciente.; Camino: parte de la orilla y se pierde entre las montañas.; Las montañas son las columnas que hemos visto antes que representan el conocimiento y sabiduria; Luz: representa el triunfo de aquel que cuida su espiritualidad sin olvidar el mundo material.","desc_general":"Necesidad de equilibrio; Trasmutar energia; Adaptarse a las circunstancias; Integracion y unificacion; Persona conciliadora, tolerante, optimista y equilibriada; Intercambios; Tranquilidad y paciencia; Ahorros; Curacion; Flexibilidad; Balance, moderacion, tenacidad; Autocontrol; Recomponer y regenerar; Dominio sobre las emociones","desc_amor":"Relacion feliz y equilibrada; Adaptabilidad con la pareja; Armonia; Comprencion y compañía; Necesidad de aceptarte y perdonarte para encontrar pareja; Solucion de conflictos tomando el camino de en medio; Nos pide paciencia y no precipitar los acontecimientos","desc_trabajo":"Necesidad de cooperar con otros y escuchar consejos; Consolidacion de una idea; Negociar, ahorrar; Estabilidad economica; Mejora economica moderada; Flexibilidad; Trabajo temporal; Eficiencia; Estabilidad y progreso en el trabajo; Pode indicar viaje de negocios; Sintonia con compañeros y jefes; Trabajas por satisfaccion propia","desc_salud":"Buena salud fisica y mental; Puede aconsejar llevar una vida mas sana; Estudios de laboratorio; Transfucion sanguinea; Medula osea; Aparato gastrointestinal; Terapia energetica: acupuntura, curacion magnetica","desc_espiritualidad":"Apertura de mente; Pruebas que exigen paciencia y adaptacion; Angel guardian","inv_general":"Malgastar; Confundir; Enfermar; Inflexibilidad; Largo plazo; Impaciencia; Falta de moderacion y prudencia; Persona extremista y exagerada, poCO flexible o adaptable.; Estrés, necesidad de pararse y reconsiderar.; Ausencia de planificación, necesidad de tener prioridades y buenas ideas.; Desequilibrio; Falta de enfoque; Tension y enfrentamiento con los demas; Falta de cooperacion","inv_amor":"Se limitan los sentimientos; Conformidad; Falta de comunicación; Se toman malas deciciones para resolver problemas; Desacuerdos profundos","inv_trabajo":"Necesidad de estabilidad; No hay cambios en los problemas economicoS; No hay una promocion por falta de adaptabilidad; Falta de comunicación con compañeros; Malos entendidos","inv_salud":"Salud mas que mala mal cuidada; Cansancio o excesos; Enfermedades de larga duracion o incurables; Parto laborioso; Nervios que afectan el estomago; Es necesario tranquilizarse","inv_espiritualidad":"Energia malgastada; Necesidad de buscar personas que esten en el camino espiritual; Bloqueos energeticos; Se recomienda hacer una meditacion para abrir chakras","image_url":"https://upload.wikimedia.org/wikipedia/commons/f/f8/RWS_Tarot_14_Temperance.jpg"},
+        {"carta_numero":15,"carta_nombre":"EL DIABLO","analisis":"Numero 15: representa la complicacion, obsecion, ataduras mentales, riesgos y conflictos.; Tambien. Representa al mismo numero 6 (1+5) que es la carta de los amantes los cuales estan en esta carta pero encadenados en la materia.; El diablo: representado como bafomet o la cabra de mendes que es su representacion tipica en el mundo de la magia; Alas de murcielago: esto y el fondo negro nos habla de que el diablo proviene de la oscuridad; Gesto con la mano: según Waite este es el reverso de la señal que hacia el sacerdote para dar la bendicion.; Mientras el Sacerdote, con dos dedos arriba y otros dos abajo, señala la dualidad del universo, lo material y lo espiritual, El Diablo con sú mano abierta intenta convencernos de que nada existe excepto lo obvio y lo visible.; Simbolo de saturno: este esta tatuado en la mano y para muchos es un símbolo de tristeza o desgracia, cuando más bien aparece como símbolo del tiempo que pasa y de la vida material que nos limita.; Pentagrama invertido: representa la colocacion de los elementos sobre el espiritu, pero tambien representa que los organos (mas que nada los sexuales) estan por encima de la mente.; Es decir para el diablo el espiritu y la mente no tienen ningun valor; Base sobre la que se posa el diablo: esta equivale a la mitad de un cuadrado, simbolo de la perfeccion.; Es decir que el diablo solo se apoya en lo material, los deseos fisicos y pasionales faltandole asi la mitad espiritual de la realidad; Pareja: se trata de los enamorados y se encuentran atados pero no asustados y de hecho las cadenas estan flojas por lo que podrian irse con facilidad, pero elijen no irse.; Colas: el lleva una cola que se ha encendido por la llama de la antorcha que lleva el diablo, simbolizando la pasion que destruye.; Ella lleva una cola en forma de vid, simbolo de los placeres que embriagan como el vino.; Fondo negro: el diablo habita en el reino del inconciente y no en el exterior.; El Diablo, que no es un ente externo como lo pintan algunas religiones, sino el lado de nosotros que es sólo apetitos y deseos egoístas, no cuenta con la libertad y elevación de la que es capaz el ser humano a través de la inteligencia.","desc_general":"Obseciones; Ser esclavo de una persona o situacion; Materialismo. Avaricia.; Frustración, sensación de estar atrapado en una situación.; Ignorancia, desconocimiento de lo que es mejor para uno mismo.; Persona manipuladora; Deseo; Someter; Dominar; Rebeldia; Tener antes de ser; Instintos bajos","desc_amor":"Represión emocional y sexual o lo contrario, adicción al sexo o a las relaciones dañinas.; La relacion es meramente sexual; Desequilibrio en la pareja (uno manipula al otro); No hay romanticismo; Inestabilidad emocional, peleas y discuciones; Infidelidad; Una persona que se mete en la relacion","desc_trabajo":"Alguien que nos manipula y controla.; Intensidad, compromiso por lo que se hace; Astucia para los negocios; El socio no es de confiar aunque si sera bueno para las negociaciones; Puede indicar mezclar trabajo con relacion sexuales; Ambiente negativo y desconfianza; Mucho dinero a cambio de algo; Fortuna adquirida de negocios sucios O deshonestos","desc_salud":"Adicciones; Excesos dañinos para la salud; Estar atado a un tratamiento; Aparato reproductor; Estrés y cansancio extremos","desc_espiritualidad":"Superficialidad, olvido de la espiritualidad. Necesidad de vencer tentasiones; Conocer nuestras propias limitaciones y defectos; Trabajo de sombras; Necesidad de realizar afirmaciones positivas","inv_general":"Romper moldes; Energia positiva que se libera; Esperanza; momento de liberarse de una adiccion; Reconocimiento de que se tiene un problema.; Petición de ayuda.; Vencer obstáculos.; Empezar a ser menos egoísta.; Búsqueda de la libertad personal..; Desapego de lo material; Estamos en proceso de conectar con nosotros mismos; Se pierde la parte de la astucia y oportunidad de la carta","inv_amor":"Decepciones romanticas importantes; Replanteamientos serios en la vida de la pareja; Temor al dolor y a la soledad; Ceso de hostilidades y peleas","inv_trabajo":"Aconseja no innovar; No es buen momento para cambiar de trabajo o probar cosas nuevas; Envidias; No es recomendable las asociaciones o firmas de contrato; Estafas o timos; No confies en las demas personas ni las mas cercanas; Situacion economica dificil","inv_salud":"Desmejoramientos o recaidas; Enfermedades venereas; Deshacerte del estrés ayudara","inv_espiritualidad":"Intento de conexión con lo divino, búsqueda espiritual.; Dificultad de mantener la actitud positiva","image_url":"https://upload.wikimedia.org/wikipedia/commons/5/55/RWS_Tarot_15_Devil.jpg"},
+        {"carta_numero":16,"carta_nombre":"LA TORRE","analisis":"El número 16 nos recuerda la importancia de cuidar a los demás. Se cree que el número 16 tiene un significado kármico. Para alcanzar mayor conocimiento, obstáculos que puedan tener mayor incidencia en sus vidas.; Fondo oscuro: nos recuerda que aun estamos en el territorio del diablo, en la oscuridad.; La torre: es gris y tiene la misma forma que los pilares de sabiduría que aparecían en cartas anteriores; como dice Waite, representa a la mente humana en todos sus aspectos.; Corona de oro: Representa tanto la vanidad humana como su grandeza.; Rayo: La Torre es alcanzada por un rayo en forma de flecha, que representa a la vez destrucción y conocimiento; La Torre es señalada y elegida por una revelación. Pero esta revelación implica aceptar que todo lo existente hasta ahora ya no sirve, y que hay que cambiarlo; de ahí que el rayo destruya La Torre y le prenda fuego, a la vez iluminador y destructor.; Base de la torre: representa la soberbia humana que cree poder alcanzarlo todo, como la bíblica torre de Babel en la que se inspira. Una iluminación le supone la destrucción, pero también un nuevo comienzo del que aprender.; Dos personajes: caen de La Torre, vestidas de rojo y de azul, la energía y la espiritualidad, el consciente y el inconsciente, o , como dice Rachel Pollack, el Mago y la Sacerdotisa.; Gotas de fuego: indican que tendremos la ayuda divina. Estas gotas tienen la forma de la letra Yod, la primera del nombre de Dios en hebreo. Hay 22 llamas representando a los 22 arcanos mayores.;Nubes grises: son las nubes de la desgracia que la lluvia desparrama sobre todo mundo de forma indiscriminada","desc_general":"Cambio repentino, generalmente no muy agradable; Darse cuenta que algo no es como esperabamos; Oportunidad para revisar nuestros valores; Decepcion; Admitir Errores; Volver a Empezar; Ilusiones que se vienen abajo; Periodo de transicion que nos conducira a algo mejor si sabemos aprovecharlo; Muerte fisica (en casos especificos); Descartar lo que no sirve; Persona cerrada; Falsedad; Egoismo; Agresividad; No logras lo que deseas; Persona inestable y confundida","desc_amor":"Ruptura de la pareja; Divorcio; Dudas, cuestionamientos y planteos, Interferencia de terceros en la pareja (familia); Ataque de celos; Pasion devorada","desc_trabajo":"Perdida economica; Perdida de empleo; Fabricas, talleres u hospitales; Proyectos que se hunden; Negocio que quiebra; Errores o imprudencias que saldran caros","desc_salud":"Dar de alta; Accidentes; Convulciones o infartos; Apoplejia, ataques febriles; Estres que perjudica; Al borde de un ataque de nervios","desc_espiritualidad":"Trabajo de sombras; Debes trabajar con tu ego; Despertar de la clarividencia; Cambio de ideas espirituales; Ser tocado por la gracia divina; Ampliar la conciencia","inv_general":"Caos; Estancamiento; La persona se resiste a cambiar; Ceguera ante la realidad; Falta de humildad para aceptar los errores; Falta de voluntad para salir de una situacion negativa; Miedo al cambio; Dejarse oprimir por otros; Cambios que sucederan pero estas demorando; Intuyes que viene el cambio","inv_amor":"Rupturas; La relacion aun puede mejorar; No todo esta perdido","inv_trabajo":"No es buen momento para el azar; Los nuevos negocios salen mal; Momentos de pagar deudas o cobrarlas; Falta de motivacion en el trabajo; Pensamientos de abandonar el puesto; Complicaciones menores; Tomar a mal lo que te dicen en el trabajo","inv_salud":"Accidentes por estar distraida; Ataques depresivos; Mal pronostico despues de una operacion","inv_espiritualidad":"Te menosprecias; Creencia de que la autoflagelacion ayudara en terminos de religion; Temerle a la divinidad","image_url":"https://upload.wikimedia.org/wikipedia/commons/5/53/RWS_Tarot_16_Tower.jpg"},
+        {"carta_numero":17,"carta_nombre":"LA ESTRELLA","analisis":"Numero 17: Asociado con la inmortalidad, continuidad, la fe, esperanza, caridad y verdad.; Joven: se encuentra desnuda, tiene cabellos dorados y es voluptuosa, de forma que tiene la sensualidad de la emperatriz y la espiritualidad de la sacerdotiza. De forma que muestra armonia entre el mundo terrenal y es espiritual.; La desnudez: Una mujer que no muestra timidez porque está segura de quién es y lo que quiere, donde la vanidad ha sido trascendida y actúa con sabiduría. Nos remite a alguien muy confiado, autentico, sin engaños, alguien que ya no tiene ataduras, ni miedos, una persona segura que se muestra tal y como es.; Postura: tiene una postura relajada, como si se dejara llevar ya que ella se rige por la inspiracion, es decir, es un espiritu libre.; Pies: al igual que la templanza tiene uno en la tierra y uno en el agua de forma que participa en el mundo conciente e inconciente.; Jarras: sostiene una en cada mano como la templanza pero esta vacia una en la tierra y la otra en el agua. Esto se debe a que el alma que recobra la esperanza, o que, se acerca a la Verdad, tal vez purificada por el sufrimiento, es capaz de hallarse en paz en los dos planos y utilizar su sabiduría en ambos. Tambien se dice que tira el agua al agua para continuar asi con el ciclo de vida del prado que la rodea y que vierte agua en la tierra formando 5 arroyos que representan los 5 sentidos.; Ave: se trata del ibis, el ave sagrada del dios egipcio Thot, inventor de todas las artes, inspirador de los artistas.; Prado: no vemos ningun camino, por que el alma esta tan inspirada que por el momento no requiere encontrar un nuevo camino o meta.; Estrellas blancas: son 7 y poseen 8 puntas. Son el octograma formado con dos cuadrados colocados uno sobre otro con las puntas alternando, es para algunos un término medio entre el círculo y el cuadrado, el espíritu y la materia. Son 7 debido a que este es el numero de la intuicion y los dones.; Estrella amarilla: representa a Apolo, el sol, que en la mitología clásica inspiraba a poetas y artistas igual que Thoth, y que inunda la carta con su energía.","desc_general":"Esperanza, Ilusion; Luz al final del tunel; Llegar al final de un periodo dificil; Inspiracion; Creatividad Artistica; Llega ayuda esperada; Optimismo; Alegria de vivir; Sueños que se cumplen; Exito; Ternura, armonia, entusiasmo, buen humor; Suerte","desc_amor":"Momento para sentir y expresar amor; Amores llenos de sensualidad pero serenos, felices y espirituales; Aparicion de un nuevo amor; Nuevo proyecto en pareja que culmina en exito; Tiempos felices en la vida amorosa","desc_trabajo":"Nuevos proyectos; Muy favorable para los artistas; Trabajos de videncia, meduimnidad, arte adivinatorio, astrologos, quiromancia, etc; Ascensos; Triunfo asegurado; Si buscas trabajo lo consigues; Oportunidades laborales","desc_salud":"Bienestar; Mejora en el estado general; Aparato urinario; Mente saludable; Resultados de estudios favorables","desc_espiritualidad":"Paz Interior; Ayuda Espiritual; Armonioa, equilibrio, paz espiritual; Premoniciones; Necesidad de compartir tu espiritualidad; Guias Espirituales","inv_general":"Optimismo excesivo; Esperanzas que no se cumplen; Decepcion; Desarmonioa; Situacion que no acaba de resolverse; Falta de autoestima y paz; Falta de Fe","inv_amor":"Falta de disfrute y expresion de los sentimientos; Temor a mostrarse como es; Se ha perdido la ternura y el romanticismo; Tropiezos en la relacion pero nada grave; Bloqueos que no te permiten encontrar pareja (autoestima)","inv_trabajo":"Estancamiento; Dificultad para desarrollar capacidades; Retrasos; Excesiva generosidad que daña las finanzas; Dejas pasar oportunidades; No hay Suerte en los juegos de azar","inv_salud":"Molestias indefinidas; Estados de nerviosismo injustificado; Pospones la recuperacion","inv_espiritualidad":"Mentalidad estrecha; Haz perdido la fe en ti; Dejas de lado el cuerpo y solo te concretas en el espiritu","image_url":"https://upload.wikimedia.org/wikipedia/commons/d/db/RWS_Tarot_17_Star.jpg"},
+        {"carta_numero":18,"carta_nombre":"LA LUNA","analisis":"Numero 18: es un número de Karma, fuerza interior, abundancia y liderazgo. Tambien representa al numero 9 (1+8); Luna: tiene semblante serio e iluminando un paisaje sobrio, aunque no muy triste.; Mira hacia abajo y está rodeada de treinta y dos rayos, dieciséis principales y dieciséis secundarios.; Mientras que la tristeza de La Luna es evidente, también lo es su poder y energía, lo demuestran sus rayos, múltiplos de ocho, la Fuerza.; Rostro de la luna: se encuentra a la derecha que es el lado de la gracia, representa un don pero que tiene un precio, que puede llevarnos al autoengaño o al descubrimiento de uno; Luz de luna: esta a diferencia del sol nos puede iluminar pero con una luz tenue que no deja ver todo el panorama sino solo lo necesario para que podamos andar, lo demas lo deja en sombras (misterios y secretos); Llamas en forma de yod: al igual que en la torre se trata de la primer letra del nombre de dios en hebreo.; Representan la presencia de lo divino. El valor numérico de la letra Yod en gematría es 10. Si unes Yod (10) y He (que es igual a 5), obtendras 15, que es precisamente el número de yods en la carta.; Yod + Hé forman la primera parte del Nombre Sagrado (YH), lo cual remite a la presencia divina oculta en la oscuridad de la Luna.; Dos columnas: representan el conocimiento o sabiduria (como lo hacian en las otras cartas) pero aquí ya no son el objetivo puesto que ya las hemos atravezado y nos encontramos en un terreno de conocimiento superior.; Aun asi hemos de andarnos con cuidado, ya que nuestro entendimiento es frágil y propenso al autoengaño.; Perro: se trata de un perro domesticado, representa nuestra parte civilizada y \"domesticada\"; Lobo: es un perro salvaje, que representa nuestros instintos, intuicion y habilidades psiquicas; Camino: es el camino que debemos de seguir para desarrollar nuestra conciencia.; Empieza en el lago (subconciente) y termina en las montañas (conciente); Langosta: esta representa la evolucion, hace referencia a los primeros animales que emergieron del agua para dar sus primeros pasos en la tierra","desc_general":"Falsas ilusiones; Autoengaño; Falso concepto de uno mismo; Engaños que preferimos creer; Riesgos, mentiras; Escandalos en los que nos vemos envueltos sin querer; Imaginacion; Intuicion y talento; Confusion incertidumbre; Inconciente; Emociones; Misterio; Oculto; Sensibilidad","desc_amor":"Celos; Mucho romanticismo pero sin compromiso; Relaciones sentimentales superficiales y cambiantes; Chismes o habladurias alrededor de la relacion; Parejas que se ocultan ante los demas; Relacion que no termina de definirse; No es momento de tomar deciciones","desc_trabajo":"Trabajos que requieren de mucha imaginacion; Facilidad para contactar con el publico; Popularidad en puestos publicos; Enemigos ocultos en los que no podemos confiar; Traicion; El trabajo que ofrecen oculta cosas","desc_salud":"Gestacion, embarazo o lactancia; Mala circulacion; Obesidad; Dolencia a la que aun no se ha dado cara; Necesidad de pruebas medicas; Problemas con el aparato reproductor; Confia en tu intuicion y busca medico; Tendencia a consumir estupefacientes o alcohol","desc_espiritualidad":"Visiones que hay que disernir si son verdaderas o falsas; Sueños premonitorios; Sigue tu intuicion ya que esta es precisa y correcta; Visiones con las respuestas que esperas; Trabajo de sombras","inv_general":"Liberacion del miedo; Superacion de la tristeza; Mentiras que se descubren; Misterios resueltos; Vencer la tentasion; Claridad mental; Exageramos los sentimientos; Infelicidad en tu situacion actual","inv_amor":"Infidelidad que se descubre; Dejar relacion que ahora notas que no es saludable; Confusion en los sentimientos; Ruptura que ya viste venir; Homosexualidad; Inseguridad y confusion","inv_trabajo":"Cambio laboral; Chismes; Choques con superiores y compañeros; Opciones de trabajos confusas; Necesario ahorrar; No es tiempo de inversiones","inv_salud":"Depresion; Malestares por situaciones complicadas en la familia y/o trabajo","inv_espiritualidad":"Tu vos interna es mas fuerte que nunca; Confia en tu intuicion","image_url":"https://upload.wikimedia.org/wikipedia/commons/7/7f/RWS_Tarot_18_Moon.jpg"},
+        {"carta_numero":19,"carta_nombre":"EL SOL","analisis":"Numero 19:El número 19 lleva en sí las vibraciones de los números 1 y 9. El número 1 tiene una vibración de independencia e individualidad.; También lleva la energía del progreso, la motivación, la ambición y el avance. Simboliza nuevos comienzos y éxitos.; El número 9 lleva la energía de las Leyes Espirituales Universales.; Conduce a una persona hacia el camino de la iluminación espiritual y el despertar.; Sol: Parece mirar con ternura paternal al pequeño que cabalga en el jardín de debajo, enviándole toda la energía vital que solo El Sol es capaz de transmitir.; Rayos de sol: los rayos rectos representan accion y los ondulados vibracion; Muro: representa las limitaciones de la vida anterior del alma.; Es grisáceo y monótono como la vida del alma encerrada en sus limitaciones, pero ahora está coronado por los girasoles.; Para otros representa la construccion del ser con el tiempo, la fortaleza que se construye ladrillo a ladrillo; Girasoles: flores solares por excelencia, pero es de observar que dichas flores no miran al sol, sino al niño, que es su verdadera fuente de energía.; Representan la vida. Son 4 como los 4 palos del tarot o los 4 elementos; Niño: desnudo, coronado y victorioso, un niño alegre que sale del jardín montado a caballo.; Tras haber superado los terrores de la Torre y la Luna el alma adquiere una pureza y sabiduría que le lleva a una alegría solo comparable a la de un niño, representa la felicidad del espiritu interior cuando estamos en armonia con nuestro verdadero ser.; Desnudez: no tiene nada que ocultar, es inocente y puro; Pluma y estandarte: son de color naranja, color de energía, ya que el alma iluminada posee toda la fuerza posible.; Caballo: es blanco signo de pureza prístina; el caballo representa el dominio que el espíritu ha alcanzado sobre su \"naturaleza animal\", sobre sus instintos y apetitos, purificados y dominados.; El Sol es símbolo de resurrección en muchas culturas, y aquí nos recuerda a que cumbres puede llegar el alma humana a través del sufrimiento y la purificación: Puede conocer una alegría e iluminación que nunca soñó que existiera.","desc_general":"Éxito; Optimismo; Felicidad; LUZ; Calor; Buenos augurios; Diversion; Todo ira a mejor; Confianza en uno mismo; Persona confiable","desc_amor":"Amor fraternal; Sentimientos verdaderos y puros en la relacion; Camino a la felicidad; Boda; Bienestar; Uniones; Amor y sexualidad; Dificultades que desaparecen; Encuentras nuevo amor","desc_trabajo":"Nuevo empleo; Estabilidad; EscensoS; Aumentos de sueldo; Plenitud profesional; Soluciones a problemas; Trabajo en equipo; El dinero llega pronto; Cobrar deudas; Herencias; Suerte en el juego de azar; Inversiones que crecen","desc_salud":"ojos; Recuperacion plena; No hay problemas","desc_espiritualidad":"Te sientes bendecida; Busqueda de la verdad; Iluminacion personal; Alcanzar tus objetivos espirituales","inv_general":"Sensacion de falta y escacez; Depresion temporal; Perdida de confianza y seguridad; Sensaciones negativas; Pesimismo y depresion; Negatividad","inv_amor":"Separacion de la pareja; Discuciones y problemas; Te costara encontrar pareja; Infelicidad; Se muestran las cartas; Se esta dando por sentado la relacion","inv_trabajo":"Falta de atencion y concentracion; El trabajo no nos llena; No hay motivacion; Cometer errores; No debes malgastar el dinero; Ganancias no muy importantes; Contratos con retrasos; Oportunidades de trabajo menores","inv_salud":"Advierte falta de entuciasmo; Necedad de cambiar costumbres; Se recomienda descanso; Problemas de vista","inv_espiritualidad":"Confusion en el ambito espiritual; Prueba practicas nuevas; Requieres meditacion","image_url":"https://upload.wikimedia.org/wikipedia/commons/1/17/RWS_Tarot_19_Sun.jpg"},
+        {"carta_numero":20,"carta_nombre":"EL JUICIO","analisis":"Numero 20: representa dualidad, la doble vision con la que se pueden ver las situaciones de la vida.; También representa la entrega o la búsqueda de apoyo o ayuda espiritual, psicológico o mental.; El 20 nos dice claramente, basándose en la experiencia, que es más importante todo aquello que nos puede aportar lo espiritual que todo lo material.; Angel: Es muy similar al que aparecía en la carta de los Enamorados preside la carta, entre nubes;; su gesto es sereno y casi ausente, ya que toda su fuerza está concentrada en soplar la trompeta que llama a las almas a despertar.; Bandera con cruz: este símbolo, más que valor religioso, representa exactamente lo que su forma indica;; la unión o cruce de varios caminos en un solo punto.; El hecho de que la cruz sea roja, color de energía, implica una llamada a vivir esa llamada de forma activa y práctica en nuestras vidas.; Familia:Dos de ellos son una pareja como la que veíamos en los Enamorados y el Diablo;; pero en esta ocasión miran directamente al ángel, escuchando y recibiendo su llamada con gozo y alegría, ya que están preparados para seguirla.; Entre ellos está un niño, fruto de su relación, cuya cara no podemos ver;; eso es porque el niño representa a todo aquel que ve o consulta la carta, y sólo dicho consultante puede saber si escuchará esa llamada o no, y es por esto que el rostro del niño es un enigma.; Figuras del fondo: estan ahí para recordarnos que no estamos solos, que no somos verdaderamente libres si otros son esclavos, y que oír la llamada de nuestro espíritu no es un acto egoísta, sino uno que ha de servirnos para mejorarnos a nosotros y a lo que nos rodea.; Tumbas: representan la oscuridad que dejamos atrás para seguir el llamado a algo mejor; Montañas al fondo: Las montañas del fondo son llamadas por Waite \"montañas del pensamiento abstracto\" indicando que el alma, al aceptar la llamada divina, es capaz de ver las cosas tal y como son, sin el engaño de los sentidos, como los ideales platónicos.; Representan tambien los obstaculos dificiles de superar si no hacemos lo correcto, la imposibilidad de escapar del juicio final; Oceano: representa el final del rio que hemos visto que fluye por los demas arcanos empezando desde la emperatriz","desc_general":"Recompenza por nuestros actos; Recogemos lo que sembramos; Comportamiento correcto que recibe premios; Éxito; Liberacion; Superacion de pruebas; Eliminacion de restricciones y obstaculos; Lucidez; Perdon de nosotros mismos; Reconciliacion profunda; Acuerdos y perdones; Anuncio de algo nuevo; Llegada de noticias","desc_amor":"Tiempo extraordinario en pareja; Armonia y comprension; Reconciliacion con viejos amores; Amigos que regresan; Es momento de valorar la relacion (positivo); Punto de infleccion en la relacion; Perdon por algo del pasado","desc_trabajo":"Llamada vocacional que debemos escuchar; Posible juicio legal que tiene éxito; Esfuerzos valorados; Mejoras laborales; Ascensos o aumento de sueldo; Prejuicios en el trabajo; Suerte en juego de azar; Economia favorable; Herencias","desc_salud":"Articulaciones; Miembros superior e inferior (rodillas y muñecas); Soluciones a dolencias; Te decides a dejar malos habitos; Pruebas medicas que indican verdades","desc_espiritualidad":"Renacimiento, resurreccion espiritual, despues de una epoca dificil; Elevacion espiritual; Llamada espiritual; Nuevos intereses espirituales; Encontrar la verdad y sabiduria; Mensajes de tus guias; Llamada de deidades","inv_general":"Consecuencias de actos negativos; Deuda karmica a pagar; Indecision, incapacidad de tomar decisiones correctas; Momento de dejar cosas atrás y de lierarse de restricciones; Conlicto de autoestima profundo; Debes enfrentarte a ti mismo; Temor al cambio; Conflicto interior; Inflingirse dolor a uno mismo","inv_amor":"Discuciones; Encierro y ensimismamiento; Celos por inseguridades; Aparecen personas incompatibles contigo; No es momento de iniciar una relacion","inv_trabajo":"Problemas legales; Despidos; Resoluciones negativas; Chismes y habladurias en el trabajo; Es momento para cambiar de trabajo; Temor por gastar","inv_salud":"Extrema cuidados; Debilitamiento emocional y mental; Depresion; Insomnio","inv_espiritualidad":"Incapacidad de escuchar la Ilamada de nuestro interior; Trabajo de sombras; Estancamiento espiritual; Bloqueos","image_url":"https://upload.wikimedia.org/wikipedia/commons/d/dd/RWS_Tarot_20_Judgement.jpg"},
+        {"carta_numero":21,"carta_nombre":"EL MUNDO","analisis":"Numero 21: Equivale al numero 3 (2+1) que es considerado en la numerología como un número creativo, optimista y alegre.; Está asociado con la comunicación, la expresión artística y el crecimiento personal.; Por lo tanto, el número 21 se asocia con estas mismas energías, pero de manera más intensa y profunda.; El número 21 también se asocia con la idea de la perfección, el éxito y la realización de metas.; Se dice que el número 21 representa la recompensa por el arduo trabajo y la dedicación, y que aquellos que ven el número 21 con frecuencia pueden esperar una recompensa por sus esfuerzos.; Personaje: parece femenina, pero en realidad es hermafrodita (su dualidad sexual está cubierta por un pañuelo violeta, símbolo de magia y misticismo).; La figura está desnuda, expresando su pureza primitiva y libertad, y si esconde sus genitales es porque la dualidad de su sexo simboliza la unión de todos los aspectos del ser humano, masculino y femenino, consciente e inconsciente, y esta unidad perfecta es un misterio que sólo los que recorran el sendero descubrirán.; Piernas: forman el mismo símbolo que las de el Colgado con el mismo sentido de signo de protección de la divinidad que comentábamos en la diapositiva correspondiente, pero también con el sentido extra de que, al estar esta figura de pie, tiene un pie en la tierra y otro en el aire;; vive firmemente plantada en la realidad, pero a la vez es espiritualmente elevada y libre.; Varas: reúnen al Mago y a la Sacerdotisa, al espíritu y a la acción, al consciente y al inconsciente, a la evolución y a la involución.; Tambien representan el equilibrio; Cielo azul: representa la elevacion espiritual; Corona: Su forma de por sí ya es sugerente;; es a la vez un cero, el número de el loco, que indica que este viaje inacabable fermina y vuelve a empezar, y el huevo del que todo vuelve a nacer.; En ambos caso simboliza cómo el fin se une con el principio, y como alcanzar la plenitud supone, al menos en parte, volver a la inocencia primigenia del Loco.; Ramas verdes: en clara referencia a la naturaleza, atadas con dos lazos rojos de energía.; Este óvalo también recuerda a una corona de victoria y sabiduría (corona de laurel); Cintas rojas: forman el simbolo del infinito, representan las recompensas infinitas de los esfuerzos en la mejora de nosotros mismo y de quienes nos rodean; Tetramorfos: conjunto de cuatro figuras que representan, entre otras cosas, los cuatro elementos y que ya vimos en la Rueda de la Fortuna.; Debido a la comprensión total y absoluta de la realidad, esos elementos aparecen claros y mucho más cercanos.","desc_general":"Realizacion plena y libre; Éxito; Destino favorable; Conseguir lo que se busca; Persona feliz, expansiva, talentosa; Mejora el pronostico de la tirada; Popularidad; Creciente vida social; Reconocimiento de meritos personales; Permanente; Ciclos; Amor propio; Finalizacion de procesos; Suerte; Viajes proximos","desc_amor":"Armonia y felicidad; Final de una etapa; Éxito personal y social; Relacion con buenos sentimientos mas que pasion egoista; Compromisos y uniones; Bodas y celebraciones; Conoceras a alguien que viene de lejos (extranjero)","desc_trabajo":"Patrimonio; Herencias; Jubilacion o pensiones; Riqueza, plenitud y liberacion economica; Triunfo personal; Titulos y diplomas; Fama y éxito; Danza y gimnacia; Éxito profecional; Honores y reconocimientos; Buen momento para emprendimientos; Valentia para cambiar a un mejor empleo; Ascensos; Libertad absoluta para obrar, madurez plena e independencia.; Conciencia cósmica.","desc_salud":"Concepcion de hijos; Plena salud; Cualquier problema mejora; Cirujias rapidas y favorables; Tratamientos novedosos provechosos","desc_espiritualidad":"Trasmutacion espiritual que conduce a plenitud; Espiritu avanzado; Proteccion; Coneccion con lo divino a traves de lo femenino; Momento para conocer otros puntos de vista que te enriqueceran","inv_general":"Inercia; Falta de animo; Falta de energia; Falta de vision a futuro; Obstaculos; Decepcion; Falta de realizacion; Sensacion de no avanzar; Caduco; Fracaso; encerrarse","inv_amor":"Rupturas imprevistas; Necesidad de soledad; Relaciones que aparecen pero que se deben evaluar; Distanciamiento","inv_trabajo":"Fin de sociedad; No es buen momento de un cambio laboral; Mal entendidos; Necesario ahorrar y no malgastar; Desonrro publico","inv_salud":"Debilidad; Problemas con el sistema respiratorio; Alergias; infecciones","inv_espiritualidad":"Sensaciones intensas y no muy agradables; Se necesita soporte espiritual; Bloqueos","image_url":"https://upload.wikimedia.org/wikipedia/commons/f/ff/RWS_Tarot_21_World.jpg"}
+    ];
+    
+    // --- SCRIPT CORE (Remaining code is the same as the previous corrected version) ---
+    // ... (The rest of the script is identical to the previous version and handles all functionalities)
+    
+    // DOM Elements & State
+    const canvas = document.getElementById('canvas');
+    const addCardBtn = document.getElementById('add-card-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const modal = document.getElementById('card-modal');
+    const modalList = document.getElementById('modal-card-list');
+    const closeModalBtn = document.querySelector('.close-btn');
+    const analisisTitle = document.getElementById('analisis-title');
+    const analisisText = document.getElementById('analisis-text');
+    const descriptionTitle = document.getElementById('description-title');
+    const descriptionText = document.getElementById('description-text');
+    const descButtons = document.querySelectorAll('.desc-btn');
+    let activeCardData = null;
+    let activeCardElement = null;
+
+    function initializeApp() {
+        populateModal();
+        addEventListeners();
+        resetInfoPanel();
+    }
+
+    function populateModal() {
+        modalList.innerHTML = '';
+        tarotData.forEach(card => {
+            const li = document.createElement('li');
+            li.textContent = `${card.carta_numero}. ${card.carta_nombre}`;
+            li.dataset.cardNumber = card.carta_numero;
+            li.addEventListener('click', () => {
+                addCardToCanvas(card.carta_numero);
+                modal.style.display = 'none';
+            });
+            modalList.appendChild(li);
+        });
+    }
+
+    function addCardToCanvas(cardNumber) {
+        const cardCount = canvas.querySelectorAll('.card-container').length;
+        if (cardCount >= 10) {
+            alert('Puedes agregar un máximo de 10 cartas al canvas.');
+            return;
+        }
+
+        const cardData = tarotData.find(c => c.carta_numero == cardNumber);
+        if (!cardData) return;
+        
+        const container = document.createElement('div');
+        container.className = 'card-container';
+        container.dataset.cardNumber = cardNumber;
+        container.dataset.inverted = 'false';
+        
+        const leftPosition = 15 + (cardCount % 7) * 40;
+        const topPosition = 20 + Math.floor(cardCount / 7) * 40;
+        container.style.left = `${leftPosition}px`;
+        container.style.top = `${topPosition}px`;
+
+        const cardElement = document.createElement('img');
+        cardElement.src = cardData.image_url;
+        cardElement.className = 'tarot-card';
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-card-btn';
+        deleteBtn.innerHTML = '&times;';
+        
+        container.appendChild(cardElement);
+        container.appendChild(deleteBtn);
+        canvas.appendChild(container);
+
+        container.addEventListener('dblclick', toggleInverted);
+        deleteBtn.addEventListener('click', deleteCard);
+        makeDraggable(container);
+        handleDoubleTap(container);
+    }
+
+    function handleDoubleTap(element) {
+        let lastTap = 0;
+        element.addEventListener('touchend', function(event) {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 300 && tapLength > 0) {
+                // Doble toque detectado
+                event.preventDefault();
+                toggleInverted(element);
+            }
+            lastTap = currentTime;
+        });
+        // Mantenemos el dblclick para escritorio
+        element.addEventListener('dblclick', () => toggleInverted(element));
+    }
+
+    function makeDraggable(element) {
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let initialLeft = 0, initialTop = 0;
+
+        const dragStart = (e) => {
+            const eventPos = e.touches ? e.touches[0] : e;
+            startX = eventPos.clientX;
+            startY = eventPos.clientY;
+            initialLeft = element.offsetLeft;
+            initialTop = element.offsetTop;
+            isDragging = false;
+
+            document.addEventListener('mousemove', elementDrag);
+            document.addEventListener('touchmove', elementDrag, { passive: false });
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('touchend', dragEnd);
+        };
+
+        const elementDrag = (e) => {
+            const eventPos = e.touches ? e.touches[0] : e;
+            const deltaX = eventPos.clientX - startX;
+            const deltaY = eventPos.clientY - startY;
+
+            if (!isDragging && (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5)) {
+                // Solo si el movimiento horizontal es mayor que el vertical, consideramos que es un arrastre.
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    isDragging = true;
+                    element.classList.add('dragging');
+                } else {
+                    // Si el movimiento es vertical, cancelamos el arrastre para permitir el scroll.
+                    dragEnd();
+                    return;
+                }
+            }
+
+            if (isDragging) {
+                e.preventDefault();
+                let newLeft = initialLeft + deltaX;
+                let newTop = initialTop + deltaY;
+
+                const canvasRect = canvas.getBoundingClientRect();
+                const elemRect = element.getBoundingClientRect();
+                if (newLeft < 0) newLeft = 0;
+                if (newTop < 0) newTop = 0;
+                if (newLeft + elemRect.width > canvasRect.width) newLeft = canvasRect.width - elemRect.width;
+                if (newTop + elemRect.height > canvasRect.height) newTop = canvasRect.height - elemRect.height;
+                
+                element.style.left = `${newLeft}px`;
+                element.style.top = `${newTop}px`;
+            }
+        };
+
+        const dragEnd = () => {
+            if (!isDragging) {
+                // Si no se arrastró, fue un clic.
+                handleCardClick({ currentTarget: element });
+            }
+            element.classList.remove('dragging');
+            document.removeEventListener('mousemove', elementDrag);
+            document.removeEventListener('touchmove', elementDrag);
+            document.removeEventListener('mouseup', dragEnd);
+            document.removeEventListener('touchend', dragEnd);
+        };
+
+        element.addEventListener('mousedown', dragStart);
+        element.addEventListener('touchstart', dragStart, { passive: true });
+    }
+
+    function handleCardClick(event) {
+        const clickedContainer = event.currentTarget;
+        
+        document.querySelectorAll('.card-container').forEach(c => c.classList.remove('active-card'));
+        clickedContainer.classList.add('active-card');
+        
+        const cardNumber = clickedContainer.dataset.cardNumber;
+        activeCardElement = clickedContainer;
+        activeCardData = tarotData.find(c => c.carta_numero == cardNumber);
+
+        updateInfoPanel();
+    }
+
+    function toggleInverted(container) {
+        const isInverted = container.dataset.inverted === 'true';
+        container.dataset.inverted = !isInverted;
+        
+        const cardImage = container.querySelector('.tarot-card');
+        cardImage.style.transform = !isInverted ? 'rotate(180deg)' : 'rotate(0deg)';
+        
+        if(container.classList.contains('active-card')) {
+            updateInfoPanel();
+        }
+    }
+
+    function deleteCard(event) {
+        event.stopPropagation();
+        const containerToDelete = event.target.parentElement;
+        const wasActive = containerToDelete.classList.contains('active-card');
+        
+        containerToDelete.remove();
+
+        if (wasActive) {
+            resetInfoPanel();
+        }
+    }
+    
+    function updateInfoPanel() {
+        if (activeCardData) {
+            const isInverted = activeCardElement.dataset.inverted === 'true';
+            analisisTitle.textContent = `Análisis: ${activeCardData.carta_nombre} ${isInverted ? '(Invertida)' : ''}`;
+            analisisText.innerHTML = `<p>${activeCardData.analisis.replaceAll(';', '<br>')}</p>`;
+            descriptionTitle.textContent = "Descripción";
+            descriptionText.innerHTML = "<p>Selecciona una categoría para ver su descripción.</p>";
+            descButtons.forEach(btn => btn.classList.remove('active'));
+        } else {
+            resetInfoPanel();
+        }
+    }
+
+    function resetInfoPanel() {
+        activeCardData = null;
+        activeCardElement = null;
+        analisisTitle.textContent = 'Análisis';
+        analisisText.innerHTML = '<p>Agrega y selecciona una carta para ver su análisis.</p>';
+        descriptionTitle.textContent = "Descripción";
+        descriptionText.innerHTML = "<p>Selecciona una categoría para ver su descripción.</p>";
+        document.querySelectorAll('.card-container').forEach(c => c.classList.remove('active-card'));
+        descButtons.forEach(btn => btn.classList.remove('active'));
+    }
+
+    function displayDescription(type) {
+        if (!activeCardData) {
+            alert('Por favor, selecciona una carta primero.');
+            return;
+        }
+        
+        const isInverted = activeCardElement.dataset.inverted === 'true';
+        descButtons.forEach(btn => btn.classList.remove('active'));
+        const activeButton = document.querySelector(`.desc-btn[data-desc="${type}"]`);
+        activeButton.classList.add('active');
+
+        const key = isInverted ? `inv_${type}` : `desc_${type}`;
+        const titleText = activeButton.textContent;
+        
+        descriptionTitle.textContent = `${titleText} ${isInverted ? '(Invertida)' : ''}`;
+        descriptionText.innerHTML = `<p>${activeCardData[key].replaceAll(';', '<br>')}</p>`;
+    }
+
+    function clearCanvas() {
+        canvas.querySelectorAll('.card-container').forEach(card => card.remove());
+        resetInfoPanel();
+    }
+
+    function addEventListeners() {
+        addCardBtn.addEventListener('click', () => modal.style.display = 'block');
+        closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
+        window.addEventListener('click', (event) => {
+            if (event.target == modal) modal.style.display = 'none';
+        });
+        clearBtn.addEventListener('click', clearCanvas);
+        descButtons.forEach(button => {
+            button.addEventListener('click', () => displayDescription(button.dataset.desc));
+        });
+    }
+
+    initializeApp();
+    </script>
+</body>
+</html>
